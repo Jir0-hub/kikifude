@@ -11,6 +11,7 @@ tsconfig.tsbuildinfo
 CLAUDE.md
 .claude/
 .logs/
+docs/internal/
 # Generated/downloaded test audio is large; keep the script text, ignore audio
 spike-assets/*.wav
 public/spike-audio.wav
