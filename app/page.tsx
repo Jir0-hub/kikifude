@@ -1,5 +1,5 @@
 "use client";
-// Kikitori 最小デモ: ブラウザ完結（WebGPU + Transformers.js）の日本語文字起こし。
+// Otofude 最小デモ: ブラウザ完結（WebGPU + Transformers.js）の日本語文字起こし。
 // アカウント・課金・話者分離なし（charter §3）。非WebGPU環境のフォールバックは MVP で対応。
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -212,7 +212,7 @@ export default function Home() {
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = "kikitori.txt";
+    a.download = "otofude.txt";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -222,8 +222,10 @@ export default function Home() {
   return (
     <div className="container">
       <header>
-        <h1 className="site-title">Kikitori（キキトリ）</h1>
-        <p className="tagline">ブラウザ完結・無料の日本語文字起こし（ベータ版デモ）</p>
+        <h1 className="site-title">Otofude（オトフデ）</h1>
+        <p className="tagline">
+          音声を、ブラウザだけで文字に。— 無料の日本語文字起こし（ベータ版デモ）
+        </p>
         <p className="privacy-badge">
           🔒 音声はサーバーに送信されません — すべてお使いのブラウザ内で処理されます
         </p>
@@ -339,7 +341,7 @@ export default function Home() {
 
       <footer>
         <p>
-          Kikitori
+          Otofude
           はオープンソースとして公開予定です。音声・文字起こし結果が外部に送信されないことは、ブラウザの開発者ツール（ネットワークタブ）でいつでも確認できます（通信はモデルファイルの取得のみ）。
         </p>
         <p>

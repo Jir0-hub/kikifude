@@ -1,6 +1,6 @@
-# Kikitori（キキトリ）
+# Otofude（オトフデ／音筆）
 
-**ブラウザ完結・無料の日本語文字起こしツール**（ベータ）
+**音声を、ブラウザだけで文字に。** — ブラウザ完結・無料の日本語文字起こしツール（ベータ）
 
 音声ファイルをサーバーにアップロードせず、すべてお使いのブラウザ内（WebGPU）で文字起こしします。議事録・顧客通話・取材音声など、**外部に出せない機密音声**のための文字起こしツールです。
 
@@ -59,7 +59,7 @@ npm run build  # static export → out/
 
 ## English
 
-**Kikitori** is a free, in-browser Japanese speech-to-text tool. Audio never leaves your device: inference runs entirely in the browser via WebGPU (Transformers.js v4 + ONNX Whisper models in a Web Worker). The only network traffic is the one-time model download from the Hugging Face CDN — verifiable in DevTools.
+**Otofude** is a free, in-browser Japanese speech-to-text tool. Audio never leaves your device: inference runs entirely in the browser via WebGPU (Transformers.js v4 + ONNX Whisper models in a Web Worker). The only network traffic is the one-time model download from the Hugging Face CDN — verifiable in DevTools.
 
 - Default model: `whisper-large-v3-turbo`, switchable to the Japanese-specialized `kotoba-whisper-v2.2`
 - File upload + microphone recording, timestamps, copy / .txt download

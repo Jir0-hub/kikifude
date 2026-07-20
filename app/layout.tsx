@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kikitori（キキトリ）— ブラウザ完結・無料の日本語文字起こし",
+  title: "Otofude（オトフデ）— ブラウザ完結・無料の日本語文字起こし",
   description:
     "音声をサーバーに送信せず、すべてブラウザ内（WebGPU）で処理する無料の日本語文字起こしツール。",
 };

@@ -1,4 +1,4 @@
-# Kikitori G0 技術スパイク
+# Otofude G0 技術スパイク
 
 kotoba-whisper の ONNX 版がブラウザ（WebGPU + Transformers.js v4）で実用速度・実用品質で動くかを検証するスパイク。コードは使い捨て前提（charter §4）。
 

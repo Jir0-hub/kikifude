@@ -182,7 +182,7 @@ export default function SpikePage() {
 
   return (
     <main>
-      <h1>Kikitori G0 spike</h1>
+      <h1>Otofude G0 spike</h1>
       <p data-testid="gpu-info">{gpuInfo}</p>
       {webgpuOk === false ? (
         <p style={{ color: "red" }}>
