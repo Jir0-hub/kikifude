@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kikitori — spike",
-  description: "G0 technical spike: kotoba-whisper ONNX on WebGPU",
+  title: "Kikitori（キキトリ）— ブラウザ完結・無料の日本語文字起こし",
+  description:
+    "音声をサーバーに送信せず、すべてブラウザ内（WebGPU）で処理する無料の日本語文字起こしツール。",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja">
-      <body style={{ fontFamily: "ui-monospace, monospace", margin: 16 }}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -3,6 +3,7 @@
 // Results are rendered on screen and logged as one-line JSON ("SPIKE_RESULT ...")
 // so an automated harness can scrape them from the console.
 import { useEffect, useRef, useState } from "react";
+import { waitForMessage, type WorkerMsg } from "@/lib/worker-client";
 
 const MODELS: Record<
   string,
@@ -29,26 +30,6 @@ const MODELS: Record<
     dtype: { encoder_model: "fp16", decoder_model_merged: "q4f16" },
   },
 };
-
-interface WorkerMsg {
-  type: string;
-  [key: string]: unknown;
-}
-
-function waitForMessage(worker: Worker, types: string[]): Promise<WorkerMsg> {
-  return new Promise((resolve, reject) => {
-    const handler = (e: MessageEvent<WorkerMsg>) => {
-      if (e.data.type === "error") {
-        worker.removeEventListener("message", handler);
-        reject(new Error(String(e.data.message)));
-      } else if (types.includes(e.data.type)) {
-        worker.removeEventListener("message", handler);
-        resolve(e.data);
-      }
-    };
-    worker.addEventListener("message", handler);
-  });
-}
 
 export default function SpikePage() {
   const workerRef = useRef<Worker | null>(null);
@@ -108,9 +89,10 @@ export default function SpikePage() {
     const cfg = MODELS[key];
     try {
       if (!workerRef.current) {
-        workerRef.current = new Worker(new URL("./worker.ts", import.meta.url), {
-          type: "module",
-        });
+        workerRef.current = new Worker(
+          new URL("../../lib/asr-worker.ts", import.meta.url),
+          { type: "module" },
+        );
         workerRef.current.addEventListener("message", (e: MessageEvent<WorkerMsg>) => {
           if (e.data.type === "progress") {
             setProgress(
