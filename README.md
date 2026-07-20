@@ -2,7 +2,7 @@
 
 **音声を、ブラウザだけで文字に。** — ブラウザ完結・無料の日本語文字起こしツール（ベータ）
 
-**▶ https://kikifude.com**
+**▶ https://kikifude.vercel.app**（独自ドメイン kikifude.com は接続準備中）
 
 音声ファイルをサーバーにアップロードせず、すべてお使いのブラウザ内（WebGPU）で文字起こしします。議事録・顧客通話・取材音声など、**外部に出せない機密音声**のための文字起こしツールです。
 
@@ -10,7 +10,7 @@
 
 ## 特徴
 
-- **音声はサーバーに送信されません** — 推論はすべてブラウザ内で完結します。外部通信はモデルファイルの取得（Hugging Face CDN、初回のみ）だけで、開発者ツールのネットワークタブでいつでも検証できます
+- **音声はサーバーに送信されません** — 推論はすべてブラウザ内で完結します。外部への通信は、初回のモデルファイル取得（Hugging Face CDN）と実行ランタイムの取得（onnxruntime-web の WASM、jsDelivr CDN）だけです。**音声データと文字起こし結果は一切送信されません**。開発者ツールのネットワークタブでいつでも検証できます
 - **無料・アカウント不要** — コア機能は恒久無料です
 - **モデルを選べます** — 標準は `whisper-large-v3-turbo`、切替で日本語特化の `kotoba-whisper-v2.2` を利用できます（いずれも ONNX / WebGPU 実行）
 - ファイルアップロード（mp3 / wav / m4a 等）とマイク録音に対応
@@ -22,12 +22,29 @@ WebGPU 対応ブラウザが必要です（Chrome / Edge 最新版、Safari 26 �
 
 WebGPU 非対応環境向けの軽量モデルフォールバックは開発中です。
 
+ソースコード: https://github.com/Jir0-hub/kikifude
+
 ## 技術構成
 
 - Next.js（App Router / static export）+ TypeScript
 - [@huggingface/transformers](https://github.com/huggingface/transformers.js)（Transformers.js v4）+ WebGPU、推論は Web Worker で実行
 - モデル: [onnx-community/whisper-large-v3-turbo](https://huggingface.co/onnx-community/whisper-large-v3-turbo) / [onnx-community/kotoba-whisper-v2.2-ONNX](https://huggingface.co/onnx-community/kotoba-whisper-v2.2-ONNX)（encoder fp16 / decoder q4f16）
 - バックエンドなし・データベースなし・トラッキングなし（アクセス解析は導入時に README に明記します）
+
+### 外部への通信（すべて DevTools で検証できます）
+
+| 通信先 | 内容 | タイミング |
+|---|---|---|
+| Hugging Face CDN | ONNX モデル・トークナイザ等の設定ファイル | 初回のみ（以降はブラウザキャッシュ） |
+| jsDelivr CDN | onnxruntime-web の WASM ランタイム | 初回のみ |
+
+**音声データ・文字起こし結果を送信する通信は存在しません。**
+
+## 今後（予定）
+
+- onnxruntime-web の WASM を自己ホストし、外部通信を Hugging Face CDN のみに削減する
+- WebGPU 非対応環境向けの軽量モデルフォールバック
+- SRT 書き出し
 
 ## ベンチマーク（実測）
 
@@ -61,7 +78,7 @@ npm run build  # static export → out/
 
 ## English
 
-**Kikifude** is a free, in-browser Japanese speech-to-text tool. Audio never leaves your device: inference runs entirely in the browser via WebGPU (Transformers.js v4 + ONNX Whisper models in a Web Worker). The only network traffic is the one-time model download from the Hugging Face CDN — verifiable in DevTools.
+**Kikifude** is a free, in-browser Japanese speech-to-text tool. Audio never leaves your device: inference runs entirely in the browser via WebGPU (Transformers.js v4 + ONNX Whisper models in a Web Worker). The only outbound traffic is fetching the model files (Hugging Face CDN, first run only) and the ONNX Runtime WASM binaries (jsDelivr CDN) — **no audio and no transcript is ever uploaded**. Verifiable in DevTools.
 
 - Default model: `whisper-large-v3-turbo`, switchable to the Japanese-specialized `kotoba-whisper-v2.2`
 - File upload + microphone recording, timestamps, copy / .txt download
