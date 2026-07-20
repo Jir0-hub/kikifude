@@ -4,6 +4,13 @@ out/
 tsconfig.tsbuildinfo
 *.log
 .DS_Store
+
+# 内部作業用ファイル（このリポジトリは public のため必ず除外すること）
+# CLAUDE.md / .claude / .logs には事業戦略・撤退基準・他プロジェクトとの
+# 優先順位など、公開を意図しない情報が含まれる。
+CLAUDE.md
+.claude/
+.logs/
 # Generated/downloaded test audio is large; keep the script text, ignore audio
 spike-assets/*.wav
 public/spike-audio.wav
