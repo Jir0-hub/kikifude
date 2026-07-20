@@ -7,9 +7,9 @@ published: false
 ---
 
 <!-- 公開前チェックリスト（このコメントは削除してください）
-- [x] デモ URL を「デモ公開について」節に差し込む（https://kikifude.vercel.app）
+- [x] デモ URL を「デモ公開について」節に差し込む（https://kikifude.com・稼働確認済み）
 - [x] GitHub リポジトリ URL を差し込む（https://github.com/Jir0-hub/kikifude）
-- [ ] kikifude.com の DNS 接続が完了したら、本文のデモ URL を独自ドメインに差し替える（未接続の間は vercel.app のまま公開して問題なし）
+- [x] 独自ドメイン kikifude.com の DNS 接続・SSL 発行を確認済み
 - [ ] スクリーンショット（デモ画面 / ベンチ画面）を挿入するなら Zenn に画像アップロードして差し込む
 - [ ] published: true に変更
 -->
@@ -145,7 +145,7 @@ Next.js 16（Turbopack）+ Transformers.js v4 で3つハマったので共有し
 
 この検証をベースに、**ブラウザ完結・無料の日本語文字起こしツール「Kikifude(キキフデ)」**を公開しました(モデルは turbo / kotoba を切替可能)。音声データと文字起こし結果は一切サーバーに送信されません — 外部への通信は、モデルファイル(Hugging Face CDN)と ONNX Runtime の WASM(jsDelivr CDN)の取得だけで、DevTools のネットワークタブで確認できます。
 
-- デモ: **https://kikifude.vercel.app**
+- デモ: **https://kikifude.com**
 - リポジトリ: **https://github.com/Jir0-hub/kikifude**（MIT）
 
 計測に使ったベンチマークページ(モデル・dtype・チャンク長を URL パラメータで切替)も同梱しているので、手元の GPU で追試してもらえたら嬉しいです。
