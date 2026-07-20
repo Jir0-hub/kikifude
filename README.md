@@ -1,4 +1,4 @@
-# Otofude（オトフデ／音筆）
+# Kikifude（キキフデ／聞き筆）
 
 **音声を、ブラウザだけで文字に。** — ブラウザ完結・無料の日本語文字起こしツール（ベータ）
 
@@ -59,7 +59,7 @@ npm run build  # static export → out/
 
 ## English
 
-**Otofude** is a free, in-browser Japanese speech-to-text tool. Audio never leaves your device: inference runs entirely in the browser via WebGPU (Transformers.js v4 + ONNX Whisper models in a Web Worker). The only network traffic is the one-time model download from the Hugging Face CDN — verifiable in DevTools.
+**Kikifude** is a free, in-browser Japanese speech-to-text tool. Audio never leaves your device: inference runs entirely in the browser via WebGPU (Transformers.js v4 + ONNX Whisper models in a Web Worker). The only network traffic is the one-time model download from the Hugging Face CDN — verifiable in DevTools.
 
 - Default model: `whisper-large-v3-turbo`, switchable to the Japanese-specialized `kotoba-whisper-v2.2`
 - File upload + microphone recording, timestamps, copy / .txt download
