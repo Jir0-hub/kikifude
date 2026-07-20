@@ -144,7 +144,10 @@ Next.js 16（Turbopack）+ Transformers.js v4 で3つハマったので共有し
 
 この検証をベースに、**ブラウザ完結・無料の日本語文字起こしツール「Kikifude(キキフデ)」**を公開準備中です(モデルは turbo / kotoba を切替可能。音声はサーバーに送信されず、通信はモデル取得のみ — DevTools のネットワークタブで確認できます)。
 
-<!-- TODO: デモ URL（https://kikifude.com 予定）/ GitHub リポジトリ URL をここに差し込む -->
+デモ: **https://kikifude.com**
+
+<!-- TODO: GitHub リポジトリ URL をここに差し込む（リポジトリ公開後） -->
+<!-- TODO: 公開前に kikifude.com が実際に稼働していることを確認する -->
 
 コードは MIT ライセンスで全て公開します。計測に使ったベンチマークページ(モデル・dtype・チャンク長を URL パラメータで切替)も同梱しているので、手元の GPU で追試してもらえたら嬉しいです。
 
