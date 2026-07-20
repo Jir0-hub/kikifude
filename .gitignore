@@ -16,3 +16,8 @@ docs/internal/
 spike-assets/*.wav
 public/spike-audio.wav
 public/sample-natural.mp3
+
+certificates/
+# Playwright MCP の出力先。スクリーンショットや任意ページのコンソールログが
+# 落ちるため、public リポジトリでは恒久的に除外する。
+.playwright-mcp/

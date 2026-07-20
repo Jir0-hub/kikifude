@@ -5,10 +5,99 @@
 import { useEffect, useRef, useState } from "react";
 import { waitForMessage, type WorkerMsg } from "@/lib/worker-client";
 
+// approxMB = sum of the ONNX files actually fetched for the given dtype map
+// (encoder_model_<dtype>.onnx + decoder_model_merged_<dtype>.onnx), read from
+// the HF file tree. Sanity check: turbo computes to 1468MB and the 2026-07-20
+// desktop run measured 1.47GB, so the figures line up with reality.
+//
+// Why the light models use fp16/fp16 instead of the turbo recipe (fp16 + q4f16):
+// onnx-community/whisper-{tiny,base,small} DO NOT ship q4f16 files at all — only
+// fp32 / fp16 / q4 / int8 / uint8 / bnb4. Copying the turbo dtype map here would
+// 404 at load time and the device test would be a false negative. fp16 is also
+// the smallest option for tiny/base: their decoders are dominated by the token
+// embedding table, which q4 leaves in fp32, so decoder q4 is LARGER than fp16
+// (tiny: q4 86.7MB vs fp16 59.6MB). fp16 keeps the size ladder monotonic and
+// avoids stacking quantization damage on models whose Japanese accuracy is
+// already marginal — this run is measuring the memory ceiling, not quality.
 const MODELS: Record<
   string,
-  { id: string; dtype: Record<string, string> }
+  { id: string; dtype: Record<string, string>; approxMB?: number }
 > = {
+  // --- Memory ladder for the iPhone XS OOM investigation (2026-07-20) ---
+  // iPhone XS (A12 / RAM 4GB) acquires a WebGPU adapter but the tab is killed by
+  // jetsam partway through loading turbo (~1.47GB), with no catchable exception.
+  // The binding constraint is memory, not WebGPU support. These rungs exist to
+  // bisect the ceiling in a single device session: run tiny -> base -> small and
+  // note the first key that crashes.
+  tiny: {
+    id: "onnx-community/whisper-tiny",
+    dtype: { encoder_model: "fp16", decoder_model_merged: "fp16" },
+    approxMB: 76, // encoder 16.5MB + decoder_merged 59.6MB
+  },
+  // --- fp16 hypothesis probe, PRIMARY series (Safari / WebKit, 2026-07-20) ---
+  // Mac mini M2 / Safari 26.3.1 ran `tiny` (39M params, fp16) at RTF 1.018 with
+  // warmupMs 13,310, while the same machine on Chrome 145 ran `turbo` (809M
+  // params, 20x larger) at RTF 0.137 / warmupMs 2,829. A 20x smaller model being
+  // 7x slower is not a capacity problem.
+  //
+  // The original suspicion — that WebKit lacks `shader-f16` and has to convert
+  // every fp16 tensor — is REFUTED: the Safari machine reports `shader-f16: YES`
+  // and a maxBufferSize within 4 bytes of Chrome's. Do not resurrect it.
+  //
+  // These rungs are kept anyway. They isolate dtype itself (same model, same
+  // audio, formats containing no f16 at all), which now answers a different
+  // question: whether dtype handling matters here for some reason OTHER than
+  // the missing-feature story. If `tiny-fp32` is dramatically faster than `tiny`
+  // despite being 2x the download, dtype is still implicated and the cause lies
+  // in how f16 is executed rather than whether it is supported.
+  //
+  // These must be `tiny`, not `small`. On the Mac mini M2 / Safari 26.3.1 under
+  // investigation, `small` (485MB) loads but is killed during inference, so it
+  // cannot produce a baseline — and `small-fp32` is twice its size, so it cannot
+  // produce a verdict either. `tiny` is the only rung with a completed run on
+  // that machine (RTF 1.018 / warmupMs 13,310), which makes it the only place a
+  // dtype A/B can actually be compared. Sizes here stay far under the ceiling.
+  //
+  // Verified against the HF file tree before listing (a 404 would surface as a
+  // load failure and be misread as an OOM crash): q8 -> encoder_model_quantized
+  // .onnx + decoder_model_merged_quantized.onnx, fp32 -> the unsuffixed
+  // encoder_model.onnx + decoder_model_merged.onnx. Neither contains any f16.
+  "tiny-q8": {
+    id: "onnx-community/whisper-tiny",
+    dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
+    approxMB: 41, // encoder 10.1MB + decoder_merged 30.7MB
+  },
+  "tiny-fp32": {
+    id: "onnx-community/whisper-tiny",
+    dtype: { encoder_model: "fp32", decoder_model_merged: "fp32" },
+    approxMB: 152, // encoder 32.9MB + decoder_merged 118.6MB
+  },
+  base: {
+    id: "onnx-community/whisper-base",
+    dtype: { encoder_model: "fp16", decoder_model_merged: "fp16" },
+    approxMB: 146, // encoder 41.3MB + decoder_merged 104.7MB
+  },
+  small: {
+    id: "onnx-community/whisper-small",
+    dtype: { encoder_model: "fp16", decoder_model_merged: "fp16" },
+    approxMB: 485, // encoder 176.6MB + decoder_merged 308.6MB
+  },
+  // --- Same dtype A/B at `small` scale, for the CHROME side of the comparison ---
+  // Kept deliberately, but NOT for the Safari machine: `small` already OOMs there
+  // mid-inference. Their purpose is to establish what the dtype spread looks like
+  // on a browser that runs this workload well, so the Safari `tiny-*` numbers can
+  // be read against a known-good control instead of in isolation. Run these on
+  // desktop Chrome. (q4f16 does NOT exist for tiny/base/small — see note above.)
+  "small-q8": {
+    id: "onnx-community/whisper-small",
+    dtype: { encoder_model: "q8", decoder_model_merged: "q8" },
+    approxMB: 249, // encoder 92.3MB + decoder_merged 156.8MB
+  },
+  "small-fp32": {
+    id: "onnx-community/whisper-small",
+    dtype: { encoder_model: "fp32", decoder_model_merged: "fp32" },
+    approxMB: 968, // encoder 352.8MB + decoder_merged 615.3MB
+  },
   kotoba: {
     id: "onnx-community/kotoba-whisper-v2.2-ONNX",
     dtype: { encoder_model: "fp16", decoder_model_merged: "q4f16" },
@@ -28,17 +117,64 @@ const MODELS: Record<
   turbo: {
     id: "onnx-community/whisper-large-v3-turbo",
     dtype: { encoder_model: "fp16", decoder_model_merged: "q4f16" },
+    approxMB: 1468, // encoder 1274.3MB + decoder_merged 193.5MB
   },
 };
+
+const fmtModel = (k: string) => {
+  const m = MODELS[k];
+  return `${k} — ${m.id}${m.approxMB ? ` (~${m.approxMB}MB)` : ""}`;
+};
+
+// Limits worth recording for the memory/fp16 investigation. GPUSupportedLimits
+// exposes its values as prototype getters, so Object.entries() on it returns {}
+// — the names have to be listed explicitly.
+const LIMIT_KEYS = [
+  "maxBufferSize",
+  "maxStorageBufferBindingSize",
+  "maxUniformBufferBindingSize",
+  "maxComputeWorkgroupStorageSize",
+  "maxComputeInvocationsPerWorkgroup",
+] as const;
+
+interface GpuCaps {
+  shaderF16: boolean;
+  features: string[];
+  limits: Record<string, number | null>;
+}
+
+// Reads the adapter capabilities that the Safari-vs-Chrome comparison hinges on.
+// `shader-f16` is surfaced first only because it was the original suspect; it was
+// measured as present on BOTH browsers (2026-07-20), so it explains nothing. The
+// full `features` list is the part that still earns its keep: diffing the two
+// lists is what narrowed the remaining candidates. See SPIKE.md for the current
+// (unverified) hypothesis and what has already been ruled out.
+function readCaps(adapter: GPUAdapter): GpuCaps {
+  const limits: Record<string, number | null> = {};
+  for (const k of LIMIT_KEYS) {
+    const v: unknown = adapter.limits[k];
+    limits[k] = typeof v === "number" ? v : null;
+  }
+  return {
+    shaderF16: adapter.features.has("shader-f16"),
+    features: [...adapter.features].sort(),
+    limits,
+  };
+}
 
 export default function SpikePage() {
   const workerRef = useRef<Worker | null>(null);
   const runningRef = useRef(false);
   const [gpuInfo, setGpuInfo] = useState<string>("checking...");
+  const [gpuCaps, setGpuCaps] = useState<GpuCaps | null>(null);
   const [webgpuOk, setWebgpuOk] = useState<boolean | null>(null);
   const [modelKey, setModelKey] = useState("kotoba");
   const [logLines, setLogLines] = useState<string[]>([]);
   const [progress, setProgress] = useState<string>("");
+  // Shown prominently while a run is in flight. On iOS the tab can be killed by
+  // jetsam with no exception and no console, so the only surviving evidence of
+  // "which size was being loaded" is what was on screen — screenshot it.
+  const [activeKey, setActiveKey] = useState<string>("");
   const [resultJson, setResultJson] = useState<string>("");
 
   const log = (line: string) =>
@@ -61,6 +197,7 @@ export default function SpikePage() {
           return;
         }
         const info = adapter.info;
+        setGpuCaps(readCaps(adapter));
         setWebgpuOk(true);
         setGpuInfo(
           `WebGPU OK — vendor=${info?.vendor ?? "?"} architecture=${info?.architecture ?? "?"} description=${info?.description ?? "?"}`,
@@ -86,6 +223,7 @@ export default function SpikePage() {
     if (runningRef.current) return;
     runningRef.current = true;
     setResultJson("");
+    setActiveKey(key);
     const cfg = MODELS[key];
     try {
       if (!workerRef.current) {
@@ -104,7 +242,9 @@ export default function SpikePage() {
       }
       const worker = workerRef.current;
 
-      log(`load start: ${cfg.id} dtype=${JSON.stringify(cfg.dtype)}`);
+      log(
+        `load start: ${cfg.id} dtype=${JSON.stringify(cfg.dtype)} approx=${cfg.approxMB ?? "?"}MB`,
+      );
       const loadedPromise = waitForMessage(worker, ["loaded"]);
       worker.postMessage({ type: "load", modelId: cfg.id, dtype: cfg.dtype });
       const loaded = await loadedPromise;
@@ -140,12 +280,17 @@ export default function SpikePage() {
         modelKey: key,
         modelId: cfg.id,
         dtype: cfg.dtype,
+        approxMB: cfg.approxMB ?? null,
         chunkLengthS,
         strideLengthS,
         returnTimestamps,
         maxSec,
         src,
         gpu: gpuInfo,
+        // Adapter capabilities travel with the measurement on purpose: RTF alone
+        // cannot distinguish "slow GPU" from "missing GPU capability", and the two
+        // runs being compared happen on different machines/browsers.
+        gpuCaps,
         userAgent: navigator.userAgent,
         load: loaded.metrics,
         audioSec: Math.round(durationSec * 10) / 10,
@@ -184,6 +329,24 @@ export default function SpikePage() {
     <main>
       <h1>Kikifude G0 spike</h1>
       <p data-testid="gpu-info">{gpuInfo}</p>
+      {gpuCaps ? (
+        <div
+          data-testid="gpu-caps"
+          style={{
+            background: gpuCaps.shaderF16 ? "#eef6ee" : "#fff4d6",
+            padding: 8,
+            marginBottom: 8,
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: "bold" }}>
+            shader-f16: {gpuCaps.shaderF16 ? "YES" : "NO"}
+          </p>
+          <p style={{ margin: "4px 0 0" }}>features: {gpuCaps.features.join(", ") || "(none)"}</p>
+          <p style={{ margin: "4px 0 0" }}>
+            {LIMIT_KEYS.map((k) => `${k}=${gpuCaps.limits[k] ?? "?"}`).join(" / ")}
+          </p>
+        </div>
+      ) : null}
       {webgpuOk === false ? (
         <p style={{ color: "red" }}>
           この環境は WebGPU に対応していません。スパイクは WebGPU 環境でのみ実行できます。
@@ -195,7 +358,7 @@ export default function SpikePage() {
             <select value={modelKey} onChange={(e) => setModelKey(e.target.value)}>
               {Object.keys(MODELS).map((k) => (
                 <option key={k} value={k}>
-                  {k} ({MODELS[k].id})
+                  {fmtModel(k)}
                 </option>
               ))}
             </select>
@@ -205,6 +368,14 @@ export default function SpikePage() {
           </button>
         </>
       )}
+      {activeKey ? (
+        <p
+          data-testid="active-model"
+          style={{ fontWeight: "bold", background: "#fff4d6", padding: 8 }}
+        >
+          running: {fmtModel(activeKey)}
+        </p>
+      ) : null}
       <p data-testid="progress">{progress}</p>
       <pre data-testid="log" style={{ background: "#f4f4f4", padding: 8 }}>
         {logLines.join("\n")}

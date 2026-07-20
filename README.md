@@ -18,7 +18,9 @@
 
 ## 動作環境
 
-WebGPU 対応ブラウザが必要です（Chrome / Edge 最新版、Safari 26 以降など）。初回はモデルのダウンロード（約 1.4GB）が発生します。2回目以降はブラウザキャッシュから読み込みます。
+**Chrome または Edge の最新版**（Windows / macOS）を推奨します。WebGPU 対応ブラウザが必要です。初回はモデルのダウンロード（約 1.4GB）が発生します。2回目以降はブラウザキャッシュから読み込みます。
+
+**Safari および iPhone / iPad は現在ご利用いただけません。** Safari は WebGPU に対応していますが、実測で速度・品質ともに実用に耐えず、処理中にタブが強制終了する事象も確認しています。検証では、このデモで使う2モデルよりはるかに小さい `whisper-tiny`（デモ標準の `whisper-large-v3-turbo` の約20分の1の規模。動作確認用で、デモの選択肢には含まれません）ですら、Mac mini M2 / Safari 26.3.1 で音声の長さと同じだけ処理時間がかかり（RTF 1.018。1.0 で等速、小さいほど速い）、出力も途中から破綻しました。デモのモデルはこれより大きいため、さらに実用外になります。誤った結果を出さないよう、UI 側で実行前にブロックしています。原因は調査中です。同じ Mac でも Chrome では正常に動作します。
 
 WebGPU 非対応環境向けの軽量モデルフォールバックは開発中です。
 
@@ -83,6 +85,6 @@ npm run build  # static export → out/
 - Default model: `whisper-large-v3-turbo`, switchable to the Japanese-specialized `kotoba-whisper-v2.2`
 - File upload + microphone recording, timestamps, copy / .txt download
 - No backend, no account, no tracking
-- Requires a WebGPU-capable browser (latest Chrome / Edge, Safari 26+)
+- Requires a WebGPU-capable browser: **latest Chrome or Edge** (Windows / macOS). Safari and all iPhone / iPad browsers are currently blocked — WebGPU is available there, but measured speed and output quality are unusable and the tab can be killed mid-run (root cause still under investigation). Chrome on the same Mac works fine.
 
 Benchmarks and reproduction steps: see [SPIKE.md](./SPIKE.md). License: MIT.

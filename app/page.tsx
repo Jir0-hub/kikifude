@@ -18,6 +18,38 @@ const MODELS = {
   },
 } as const;
 
+// 【暫定措置 / 2026-07-20】Safari（WebKit）では実行させない。
+// Mac mini M2 / Safari 26.3.1 の実測では、tiny（39M・fp16）で RTF 1.018・
+// warmupMs 13,310 と、同じ機体の Chrome 145 での turbo（809M）RTF 0.137 を
+// 大きく下回った。出力も10秒以降が幻覚ループで日本語として実用外。さらに
+// 完走後にアプリを切り替えて戻るとタブごとクラッシュする。
+// Safari は WebGPU アダプタを取得できてしまうため、既存の WebGPU 判定では
+// 素通りして「実行できるが途中で無言で死ぬ」最悪の体験になる。それを止める
+// のが目的。原因は調査中。
+//
+// 当初は WebGPU の shader-f16 非対応を疑い、capability 検出（adapter.features）
+// への置き換えを検討していたが、この方針は行き止まり。Mac mini M2 / Safari
+// 26.3.1 の実測（2026-07-20）で shader-f16 は YES、maxBufferSize も Chrome と
+// ほぼ同値（2147483644 対 2147483648）だった。**shader-f16 の有無では Safari を
+// 判別できない**ため、判定は UA ベースのまま維持する。差分の詳細と次の仮説は
+// SPIKE.md「fp16 仮説の検証手順」を参照。
+function isWebKitEngine(): boolean {
+  // 主判定。navigator.vendor はエンジン由来の値で、WebKit ビルドだけが
+  // "Apple Computer, Inc." を返す。macOS の Chrome は "Google Inc." なので
+  // 誤ってブロックしない（macOS Chrome では turbo が完走している）。
+  // iOS の Chrome / Firefox / Edge は中身が WebKit なのでこちらも true になる。
+  if (navigator.vendor === "Apple Computer, Inc.") return true;
+
+  const ua = navigator.userAgent;
+  // 補助判定1: UA に iOS 系の文字列が残っている場合。
+  if (/CriOS|FxiOS|EdgiOS|iPhone|iPad|iPod/.test(ua)) return true;
+  // 補助判定2: iPadOS 13+ の「デスクトップ用サイトを表示」では UA から iPad が
+  // 消えて Macintosh を名乗るため、補助判定1 では拾えない。この状態の iPad は
+  // maxTouchPoints が 5 を返す一方、実機の Mac はタッチ非対応で 0 のまま
+  // なので、両者を区別できる。
+  return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+}
+
 type ModelKey = keyof typeof MODELS;
 type Phase = "idle" | "loading" | "decoding" | "transcribing" | "done" | "error";
 
@@ -42,6 +74,7 @@ export default function Home() {
   const recordedRef = useRef<BlobPart[]>([]);
 
   const [webgpuOk, setWebgpuOk] = useState<boolean | null>(null);
+  const [isWebKit, setIsWebKit] = useState(false);
   const [modelKey, setModelKey] = useState<ModelKey>("turbo");
   const [source, setSource] = useState<{ blob: Blob; name: string } | null>(null);
   const [recording, setRecording] = useState(false);
@@ -59,6 +92,12 @@ export default function Home() {
 
   useEffect(() => {
     let cancelled = false;
+    // WebKit はここで確定させ、アダプタの取得自体を行わない（取得できても
+    // 実行させないため）。同期的に判定するので追加の再レンダリングは1回で済む。
+    if (isWebKitEngine()) {
+      setIsWebKit(true);
+      return;
+    }
     (async () => {
       if (!("gpu" in navigator)) {
         setWebgpuOk(false);
@@ -231,12 +270,30 @@ export default function Home() {
         </p>
       </header>
 
-      {webgpuOk === false ? (
+      {isWebKit ? (
+        <div className="card">
+          <h2>Safari では現在ご利用いただけません</h2>
+          <p>
+            Safari と、iPhone・iPad のすべてのブラウザでは、文字起こしが正しく動作しないことを
+            確認しています。処理がとても遅いうえ、途中から文章が壊れてしまい、
+            さらに処理の途中でタブが強制終了することもあります。
+          </p>
+          <p>
+            誤った結果をお見せしないよう、これらの環境では実行できないようにしています。
+            原因は現在調査中です。
+          </p>
+          <p>
+            <strong>Chrome または Edge の最新版</strong>でお試しください（Windows・Mac
+            のどちらでも動作します）。
+          </p>
+        </div>
+      ) : webgpuOk === false ? (
         <div className="card">
           <h2>お使いの環境では実行できません</h2>
           <p>
-            このデモは WebGPU 対応ブラウザが必要です（Chrome / Edge 最新版、Safari 26
-            以降など）。WebGPU 非対応環境向けの軽量モードは現在開発中です。
+            このデモは WebGPU に対応したブラウザが必要です。
+            <strong>Chrome または Edge の最新版</strong>でお試しください。WebGPU
+            非対応環境向けの軽量モードは現在開発中です。
           </p>
         </div>
       ) : (
