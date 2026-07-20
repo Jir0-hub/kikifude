@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+tsconfig.tsbuildinfo
+*.log
+.DS_Store
+# Generated/downloaded test audio is large; keep the script text, ignore audio
+spike-assets/*.wav
+public/spike-audio.wav
+public/sample-natural.mp3
