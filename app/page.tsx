@@ -95,6 +95,9 @@ export default function Home() {
   const busyRef = useRef(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordedRef = useRef<BlobPart[]>([]);
+  // 非制御の <input type="file"> は state だけではブラウザ保持のファイル名表示を
+  // 消せないため、クリア時に value を空へ戻す用の ref を持つ。
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [webgpuOk, setWebgpuOk] = useState<boolean | null>(null);
   const [isWebKit, setIsWebKit] = useState(false);
@@ -271,6 +274,20 @@ export default function Home() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // 利用者が別の音声を試せるよう、画面を完全な初期状態（ファイル未選択）へ
+  // 戻す。結果・コピー表示・phase・エラー/状況表示に加え、選択中の音声（source）と
+  // 非制御 file input のネイティブ表示もリセットする。input の value を空に
+  // しないと、同じファイルを再選択したときに onChange が発火しない点にも対応する。
+  function resetAll() {
+    setResult(null);
+    setCopied(false);
+    setPhase("idle");
+    setErrorMsg("");
+    setStatusText("");
+    setSource(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   function downloadTxt() {
     if (!result) return;
     const url = URL.createObjectURL(
@@ -341,6 +358,7 @@ export default function Home() {
             <h2>1. 音声を用意する</h2>
             <div className="row">
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="audio/*,.mp3,.wav,.m4a"
                 aria-label="音声ファイルを選択"
@@ -425,6 +443,9 @@ export default function Home() {
                 </button>
                 <button type="button" onClick={downloadTxt}>
                   .txt をダウンロード
+                </button>
+                <button type="button" onClick={resetAll}>
+                  クリア
                 </button>
                 <span className="file-name">
                   {formatTime(result.audioSec)} の音声を{" "}
