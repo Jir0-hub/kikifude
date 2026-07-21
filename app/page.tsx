@@ -1,6 +1,6 @@
 "use client";
 // Kikifude 最小デモ: ブラウザ完結（WebGPU + Transformers.js）の日本語文字起こし。
-// アカウント・課金・話者分離なし（charter §3）。非WebGPU環境のフォールバックは MVP で対応。
+// 設計上、アカウント・課金・話者分離は持たない。非WebGPU環境のフォールバックは対応予定。
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { waitForMessage, decodeTo16kMono, type WorkerMsg } from "@/lib/worker-client";
@@ -65,6 +65,29 @@ function formatTime(sec: number | null): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+// 録音 Blob の MIME からファイル拡張子を導出する。MediaRecorder の mimeType は
+// 環境依存で "audio/webm;codecs=opus"（Chrome）や "audio/mp4"（Safari 系）に
+// なりうるため、パラメータ部を落としたコンテナ種別で判定する。判定不能時は
+// 最も一般的な .webm にフォールバックする。
+function extForMime(mime: string): string {
+  const container = mime.split(";", 1)[0].trim().toLowerCase();
+  switch (container) {
+    case "audio/webm":
+      return "webm";
+    case "audio/mp4":
+    case "audio/x-m4a":
+      return "mp4";
+    case "audio/ogg":
+      return "ogg";
+    case "audio/wav":
+    case "audio/wave":
+    case "audio/x-wav":
+      return "wav";
+    default:
+      return "webm";
+  }
+}
+
 export default function Home() {
   const workerRef = useRef<Worker | null>(null);
   const loadedModelRef = useRef<string | null>(null);
@@ -76,7 +99,11 @@ export default function Home() {
   const [webgpuOk, setWebgpuOk] = useState<boolean | null>(null);
   const [isWebKit, setIsWebKit] = useState(false);
   const [modelKey, setModelKey] = useState<ModelKey>("turbo");
-  const [source, setSource] = useState<{ blob: Blob; name: string } | null>(null);
+  const [source, setSource] = useState<{
+    blob: Blob;
+    name: string;
+    kind: "file" | "recording";
+  } | null>(null);
   const [recording, setRecording] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [statusText, setStatusText] = useState("");
@@ -224,7 +251,7 @@ export default function Home() {
         const blob = new Blob(recordedRef.current, {
           type: recorder.mimeType || "audio/webm",
         });
-        setSource({ blob, name: "マイク録音" });
+        setSource({ blob, name: "マイク録音", kind: "recording" });
         setRecording(false);
       };
       recorder.start();
@@ -252,6 +279,18 @@ export default function Home() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "kikifude.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // 録音した音声（マイク由来）をローカルに保存する。すでにローカルにある
+  // アップロードファイルは対象外。拡張子は Blob の MIME から導出する。
+  function downloadRecording() {
+    if (!source || source.kind !== "recording") return;
+    const url = URL.createObjectURL(source.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kikifude-recording.${extForMime(source.blob.type)}`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -307,7 +346,7 @@ export default function Home() {
                 aria-label="音声ファイルを選択"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) setSource({ blob: f, name: f.name });
+                  if (f) setSource({ blob: f, name: f.name, kind: "file" });
                 }}
                 disabled={busy || recording}
               />
@@ -321,6 +360,18 @@ export default function Home() {
               </button>
             </div>
             {source ? <p className="file-name">選択中: {source.name}</p> : null}
+            {source?.kind === "recording" ? (
+              <div className="row">
+                <button
+                  type="button"
+                  onClick={downloadRecording}
+                  aria-label="録音した音声をこの端末に保存"
+                  disabled={busy}
+                >
+                  録音を保存
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section className="card">
