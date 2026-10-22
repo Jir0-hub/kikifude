@@ -25,7 +25,7 @@ const MODELS = {
 // 完走後にアプリを切り替えて戻るとタブごとクラッシュする。
 // Safari は WebGPU アダプタを取得できてしまうため、既存の WebGPU 判定では
 // 素通りして「実行できるが途中で無言で死ぬ」最悪の体験になる。それを止める
-// のが目的。原因は調査中。
+// のが目的。原因は未特定。
 //
 // 当初は WebGPU の shader-f16 非対応を疑い、capability 検出（adapter.features）
 // への置き換えを検討していたが、この方針は行き止まり。Mac mini M2 / Safari
@@ -336,7 +336,7 @@ export default function Home() {
           </p>
           <p>
             誤った結果をお見せしないよう、これらの環境では実行できないようにしています。
-            原因は現在調査中です。
+            原因は特定できていません。
           </p>
           <p>
             <strong>Chrome または Edge の最新版</strong>でお試しください（Windows・Mac
