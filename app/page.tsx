@@ -1,6 +1,6 @@
 "use client";
 // Kikifude 最小デモ: ブラウザ完結（WebGPU + Transformers.js）の日本語文字起こし。
-// 設計上、アカウント・課金・話者分離は持たない。非WebGPU環境のフォールバックは対応予定。
+// 設計上、アカウント・課金・話者分離は持たない。
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { waitForMessage, decodeTo16kMono, type WorkerMsg } from "@/lib/worker-client";
@@ -348,8 +348,7 @@ export default function Home() {
           <h2>お使いの環境では実行できません</h2>
           <p>
             このデモは WebGPU に対応したブラウザが必要です。
-            <strong>Chrome または Edge の最新版</strong>でお試しください。WebGPU
-            非対応環境向けの軽量モードは現在開発中です。
+            <strong>Chrome または Edge の最新版</strong>でお試しください。
           </p>
         </div>
       ) : (
